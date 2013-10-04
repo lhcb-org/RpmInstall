@@ -13,6 +13,9 @@ class Config:
     def initYUM(self, installArea):
         """ Initialize the YUM config """
         repourl = "http://test-lbrpm.web.cern.ch/test-lbrpm"
+        if installArea.repourl != None:
+            repourl =  installArea.repourl
+        
         reposdpath = installArea.yumreposd
         yumrepolhcb = os.path.join(reposdpath, "lhcb.repo")
         yumrepolcg = os.path.join(reposdpath, "lcg.repo")

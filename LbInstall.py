@@ -804,7 +804,7 @@ Pass through mode where the command is delegated to RPM (with the correct DB).
 """ % { "cmd" : cmd }
 
 
-def LbInstall(configType):
+def LbInstall(configType = "LHCbConfig"):
     logging.basicConfig(format="%(levelname)-8s: %(message)s")
     logging.getLogger().setLevel(logging.INFO)
     client = selectClient(sys.argv)
