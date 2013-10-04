@@ -706,7 +706,7 @@ class LbInstallClient(MainClient):
             runMethod = "installRpm"
 
             #If the version is in the name of the RPM then use that...
-            m = re.match("(.*)-(\d.\d.\d)-(\d)$", rpmname)
+            m = re.match("(.*)-([\d\.]+)-(\d)$", rpmname)
             if m != None:
                 rpmname = m.group(1)
                 version = m.group(2)
@@ -813,7 +813,7 @@ Pass through mode where the command is delegated to RPM (with the correct DB).
 """ % { "cmd" : cmd }
 
 
-def LbInstall(configType = "LHCbConfig"):
+def LbInstall(configType = "AtlasConfig"):
     logging.basicConfig(format="%(levelname)-8s: %(message)s")
     logging.getLogger().setLevel(logging.INFO)
     client = selectClient(sys.argv)
