@@ -22,7 +22,7 @@ exec python -c "from LbInstall import LbInstall; LbInstall('$MOD')" \$*
 EOF
 
 python_dir=`echo $PYTHONPATH | tr : "\n" | grep LBSCRIPTS | head -1`
-(cd $python_dir ; zip -q -r - . -i "LbInstall.py" -i "DependencyManager.py" -i"${MOD}.py") | \
+(cd $python_dir ; zip -q -r - . -i "LbInstall.py" -i "DependencyManager.py" -i "${MOD}.py") | \
     tee -a ${TYPE}_install.sh > /dev/null
 
 chmod a+x ${TYPE}_install.sh
