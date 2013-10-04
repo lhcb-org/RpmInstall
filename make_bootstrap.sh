@@ -1,13 +1,28 @@
 #!/bin/sh
 
-cat > at_install.sh <<EOF
+# Sets the parameters depending on the config
+# lb: for LHCb, at for Atlas
+
+TYPE=${1:-"lb"}
+case "$TYPE" in
+"lb")
+	MOD="LHCbConfig"
+	;;
+"at")
+	MOD="AtlasConfig"
+	;;
+esac
+
+echo "==> $TYPE - $MOD"
+
+cat > ${TYPE}_install.sh <<EOF
 #!/bin/sh
 export PYTHONPATH="\$0":"\$PYTHONPATH"
-exec python -c "from LbInstall import LbInstall; LbInstall()" \$*
+exec python -c "from LbInstall import LbInstall; LbInstall('$MOD')" \$*
 EOF
 
 python_dir=`echo $PYTHONPATH | tr : "\n" | grep LBSCRIPTS | head -1`
-(cd $python_dir ; zip -q -r - . -i "*.py" -i "*.pyc") | \
-    tee -a at_install.sh > /dev/null
+(cd $python_dir ; zip -q -r - . -i "LbInstall.py" -i "DependencyManager.py" -i"${MOD}.py") | \
+    tee -a ${TYPE}_install.sh > /dev/null
 
-chmod a+x at_install.sh
+chmod a+x ${TYPE}_install.sh

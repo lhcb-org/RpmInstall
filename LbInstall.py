@@ -34,7 +34,7 @@ class LbInstallConfig(object): #IGNORE:R0903
     """ Configuration object for the installer. All options and defaults
     should be kept in an instance of this class """
 
-    def __init__(self, configType = "AtlasConfig"):
+    def __init__(self, configType):
         """ Constructor for the config object """
         # Get the default siteroot
         self.siteroot = os.environ.get("MYSITEROOT", None)
@@ -119,15 +119,19 @@ class InstallArea(object): # IGNORE:R0902
         """ Init of the InstallArea, check that all directories and config files
         are present.
         """
-        # Setting the siteroot
-        self.siteroot = config.siteroot
         self.config = config
         self.log = logging.getLogger(__name__)
 
+        # Setting the siteroot
+        self.siteroot = config.siteroot
+        self.log.info("Siteroot is: %s" % self.siteroot)
+        if (self.siteroot == None):
+            self.log.error("Please specify a site root with the --root option or via the MYSITEROOT env variable")
+            sys.exit(1)
+
         # Setting the main repository URL
         self.repourl = config.repourl
-        self.log.info("Repository is: %s" % self.repourl)
-
+        
         # prefix for the RPMs
         self.rpmprefix = config.configInst.getPrefix()
 
@@ -542,9 +546,9 @@ class LbInstallOptionParser(optparse.OptionParser): #IGNORE:R0904
 class MainClient(object):
     """ Ancestor for both clients, the new one and the one
     compatible with install project arguments """
-    def __init__(self, arguments=None, dryrun=False):
+    def __init__(self, configType, arguments=None, dryrun=False):
         """ Common setup for both clients """
-        self.config = LbInstallConfig()
+        self.config = LbInstallConfig(configType)
         self.log = logging.getLogger(__name__)
         self.arguments = arguments
         self.dryrun = dryrun
@@ -660,8 +664,8 @@ class LbInstallClient(MainClient):
     MODE_LIST    = "list"
     MODES = [    MODE_INSTALLRPM, MODE_RPM, MODE_LIST ]
 
-    def __init__(self, arguments=None, dryrun=False):
-        super(LbInstallClient, self).__init__(arguments, dryrun)
+    def __init__(self, config, arguments=None, dryrun=False):
+        super(LbInstallClient, self).__init__(config, arguments, dryrun)
         self.parser.disable_interspersed_args()
         self.log = logging.getLogger(__name__)
 
@@ -709,8 +713,8 @@ class LbInstallClient(MainClient):
 class InstallProjectClient(MainClient):
     """ Backwards compatibility for install_project """
 
-    def __init__(self, arguments=None, dryrun=False):
-        super(InstallProjectClient, self).__init__(arguments, dryrun)
+    def __init__(self, configType, arguments=None, dryrun=False):
+        super(InstallProjectClient, self).__init__(configType, arguments, dryrun)
         self.log = logging.getLogger(__name__)
         # Adding the binary option for install project compatibility
         self.parser.add_option('--binary',
@@ -759,7 +763,7 @@ class InstallProjectClient(MainClient):
         """ Callback after actual execution """
         printTrailer(self.config)
 
-def selectClient(config, args):
+def selectClient(args):
     """ Chooses which client to select depending on command name and command line"""
     retclient = LbInstallClient
 
@@ -800,11 +804,11 @@ Pass through mode where the command is delegated to RPM (with the correct DB).
 """ % { "cmd" : cmd }
 
 
-def LbInstall(config = "LHCb"):
+def LbInstall(configType):
     logging.basicConfig(format="%(levelname)-8s: %(message)s")
     logging.getLogger().setLevel(logging.INFO)
-    client = selectClient(config, sys.argv)
-    sys.exit(client().main())
+    client = selectClient(sys.argv)
+    sys.exit(client(configType).main())
     
 
 # Main just chooses the client and starts it

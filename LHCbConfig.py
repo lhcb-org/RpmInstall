@@ -14,8 +14,8 @@ class Config:
         """ Initialize the YUM config """
         repourl = "http://test-lbrpm.web.cern.ch/test-lbrpm"
         reposdpath = installArea.yumreposd
-        yumrepolhcb = os.path.join(installArea.yumreposd, "lhcb.repo")
-        yumrepolcg = os.path.join(installArea, "lcg.repo")
+        yumrepolhcb = os.path.join(reposdpath, "lhcb.repo")
+        yumrepolcg = os.path.join(reposdpath, "lcg.repo")
         extrasurl = "/".join([repourl, "extras"])
         rpmsurl = "/".join([repourl, "rpm"])
         lcgsurl = "/".join([repourl, "lcg"])
