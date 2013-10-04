@@ -11,6 +11,7 @@ import inspect
 import logging
 import optparse
 import os
+import re
 import subprocess
 import sys
 import time
@@ -697,12 +698,20 @@ class LbInstallClient(MainClient):
             runArgs = [ args[1:] ]
         elif mode == LbInstallClient.MODE_INSTALLRPM:
             # Mode where the RPMs are installed by name
-            # Fills in with None if the argumantes are none there,
+            # Fills in with None if the arguments are not there,
             # Only the name is mandatory
             (rpmname, version, release) = args[1:4] + [ None ] * (4 - len(args))
             if rpmname == None:
                 raise LbInstallException("Please specify at least the name of the RPM to install")
             runMethod = "installRpm"
+
+            #If the version is in the name of the RPM then use that...
+            m = re.match("(.*)-(\d.\d.\d)-(\d)$", rpmname)
+            if m != None:
+                rpmname = m.group(1)
+                version = m.group(2)
+                release = m.group(3)
+            self.log.info("Installing RPM: %s %s %s" % (rpmname, version, release))
             runArgs =  [rpmname, version, release ]
         return (runMethod, runArgs)
 
