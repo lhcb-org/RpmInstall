@@ -30,7 +30,7 @@ __RCSID__ = "$Id$"
 
 # Checking whether the MYSITEROOT is set correctly
 ###############################################################################
-class LbInstallConfig(object, type): #IGNORE:R0903
+class LbInstallConfig(object): #IGNORE:R0903
     """ Configuration object for the installer. All options and defaults
     should be kept in an instance of this class """
 
@@ -39,7 +39,7 @@ class LbInstallConfig(object, type): #IGNORE:R0903
         # Get the default siteroot
         self.siteroot = os.environ.get("MYSITEROOT", None)
         # And the default repository URL
-        self.repourl = REPOURL
+        self.repourl = None
         # Debug mode defaults to false
         self.debug = False
         # No-update mode isn't default
@@ -58,8 +58,8 @@ class LbInstallConfig(object, type): #IGNORE:R0903
         # Keeping the config type
         self.configType = configType
         # Now inporting the config module
-        self.configMod = __import__(self.ConfigType)
-        self.configInst = self.configMod()
+        self.configMod = __import__(self.configType)
+        self.configInst = self.configMod.Config()
 
 # Utility to run a command
 ###############################################################################
@@ -207,7 +207,7 @@ class InstallArea(object): # IGNORE:R0902
             os.makedirs(self.yumreposd)
 
         # Now calling the configuration method from the specific config module...
-        self.config.configInst.initYUM()
+        self.config.configInst.initYUM(self)
 
     def _checkPrerequisites(self):
         """ Checks that external tools required by this tool to perform

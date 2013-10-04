@@ -3,6 +3,7 @@
 LbInstall specific config for ATLAS
 
 """
+import os
 
 class Config:
 
@@ -12,7 +13,7 @@ class Config:
     def initYUM(self, installArea):
         """ Initialize the YUM config """
 
-        reposdpath = instaArea.yumreposd
+        reposdpath = installArea.yumreposd
 
         if not os.path.exists(reposdpath):
             os.makedirs(reposdpath)
