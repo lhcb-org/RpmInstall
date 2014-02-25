@@ -331,11 +331,11 @@ class InstallArea(object): # IGNORE:R0902
         toinstall = []
         for pack  in packages:
             # Establishing the filename
-            self.log.info("Checking for installation of: %s", pack.rpmName())
+            self.log.debug("Checking for installation of: %s", pack.rpmName())
             if not self._isRpmInstalled(pack.rpmName()):
                 toinstall.append(pack)
             else:
-                self.log.warning("Already installed: %s will not download and install again" % pack.rpmName())
+                self.log.debug("Already installed: %s will not download and install again" % pack.rpmName())
         return toinstall
 
     def _downloadfiles(self, installlist, location):
@@ -356,7 +356,7 @@ class InstallArea(object): # IGNORE:R0902
 
             # Now doing the download
             if not needs_download:
-                self.log.warn("%s already exists, will not download" % filename)
+                self.log.debug("%s already exists, will not download" % filename)
             else:
                 self.log.info("Downloading %s to %s" % (pack.url(), full_filename))
                 urllib.urlretrieve (pack.url(), full_filename)
@@ -364,7 +364,7 @@ class InstallArea(object): # IGNORE:R0902
 
     def _installfiles(self, files, rpmloc, forceInstall=False, update=False):
         """ Install some rpm files given the location of the RPM DB """
-        fulllist = [ os.path.join(rpmloc, f) for f in files ]
+        fulllist = [ os.path.join(rpmloc, f) for f in set(files) ]
         args = [ "-ivh --oldpackage " ]
         if update or self.config.rpmupdate:
             args = [ "-Uvh" ]
@@ -454,7 +454,7 @@ class InstallArea(object): # IGNORE:R0902
         package = matches[0]
         # Now installing the RPM
         if self._isRpmInstalled(package.rpmName()):
-            self.log.warning("%s already installed" % package.rpmName())
+            self.log.debug("%s already installed" % package.rpmName())
         else:
             self.installPackage(package)
 
@@ -471,8 +471,10 @@ class InstallArea(object): # IGNORE:R0902
         self.log.info("Installing %s and dependencies" % package.rpmName())
 
         # Checking what files should be downloaded
-        installlist = self.lbYumClient.getAllPackagesRequired(package)
-        self.log.info("Found %d RPMs to install" % len(installlist))
+        installlist = set(self.lbYumClient.getAllPackagesRequired(package))
+        self.log.info("Found %d RPMs to install:" % len(installlist))
+        self.log.info(" ".join([p.rpmName() for p in installlist ]))
+
         if len(installlist) == 0:
             raise Exception("Error: No files to download")
 
