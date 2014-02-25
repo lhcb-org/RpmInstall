@@ -483,6 +483,12 @@ class InstallArea(object): # IGNORE:R0902
         # happens sometimes with yum...
         finstalllist = self._filterUrlsAlreadyInstalled(installlist)
 
+        # Check how many RPMs should be installed
+        # if non left, just log and exit
+        if len(finstalllist) == 0:
+            self.log.info("All packages already installed")
+            return
+
         # Now getting the files...
         files = self._downloadfiles(finstalllist, self.tmpdir)
 
