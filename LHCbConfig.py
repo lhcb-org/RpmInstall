@@ -21,7 +21,6 @@ class Config:
         yumrepolcg = os.path.join(reposdpath, "lcg.repo")
         extrasurl = "/".join([repourl, "extras"])
         rpmsurl = "/".join([repourl, "rpm"])
-        lcgsurl = "/".join([repourl, "lcg"])
         lhcbsurl = "/".join([repourl, "lhcb"])
 
         if not os.path.exists(yumrepolhcb):
@@ -29,13 +28,18 @@ class Config:
             yplf.write(installArea._getYumRepo("lhcbold", rpmsurl))
             yplf.write(installArea._getYumRepo("lhcb", lhcbsurl))
             yplf.close()
+
         if not os.path.exists(yumrepolcg):
+            lcgsurl = "http://service-spi.web.cern.ch/service-spi/external/rpms/lcg"
             yplf = open(yumrepolcg, 'w')
             yplf.write(installArea._getYumRepo("lcg", lcgsurl))
             yplf.close()
 
 
-    def getPrefix(self):
+    def getPrefixes(self):
         """ Returns the prefix in this case """
-        return "/opt/lhcb"
+	if group == None or group == "lhcb":
+	    return "/opt/LHCbSoft/lhcb"
+        else:
+            return "/opt/lcg"
 

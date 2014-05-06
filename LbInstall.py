@@ -132,7 +132,7 @@ class InstallArea(object): # IGNORE:R0902
         self.repourl = config.repourl
         
         # prefix for the RPMs
-        self.rpmprefix = config.configInst.getPrefix()
+        #self.rpmprefix = config.configInst.getPrefix()
 
         # Making sure the db is initialized
         self.dbpath = os.path.join(self.siteroot, SVAR, SLIB, SRPM)
@@ -268,7 +268,9 @@ class InstallArea(object): # IGNORE:R0902
 
         rpmcmd = "rpm --dbpath %s " % self.dbpath
         if not query_mode and install_mode :
-            rpmcmd += " --prefix %s " % self.siteroot
+            rpmcmd += " --relocate %s=%s " % ('/opt/lcg', os.path.join(self.siteroot, 'lcg', 'releases'))
+            rpmcmd += " --relocate %s=%s " % ('/opt/LHCbSoft', self.siteroot)
+            rpmcmd += " --badreloc "
         rpmcmd += " ".join(args)
 
         self.log.info("RPM command:")
@@ -486,9 +488,7 @@ class InstallArea(object): # IGNORE:R0902
 
         # Checking what files should be downloaded
         installlist = set(self.lbYumClient.getAllPackagesRequired(package))
-        rpmNames = set([p.rpmName() for p in self.lbYumClient.getAllPackagesRequired(package)])
-        self.log.info("Found %d RPMs to install:" % len(rpmNames))
-        self.log.info(" ".join(rpmNames))
+        self.log.info("Packages depends on %d RPMs" % len(installlist))
 
         if len(installlist) == 0:
             raise Exception("Error: No files to download")
@@ -497,6 +497,10 @@ class InstallArea(object): # IGNORE:R0902
         # installed. This shouldn't happen but it seems that this
         # happens sometimes with yum...
         finstalllist = self._filterUrlsAlreadyInstalled(installlist)
+
+        self.log.info("Found %d RPMs to install:" % len(finstalllist))
+        rpmNames = set([p.rpmName() for p in finstalllist])
+        self.log.info(" ".join(rpmNames))
 
         # Check how many RPMs should be installed
         # if non left, just log and exit
@@ -839,7 +843,7 @@ Checks whether there are any RPMs to update from repo and updates them
 """ % { "cmd" : cmd }
 
 
-def LbInstall(configType = "LCGConfig", prog="LbInstall"):
+def LbInstall(configType = "LHCbConfig", prog="LbInstall"):
     logging.basicConfig(format="%(levelname)-8s: %(message)s")
     logging.getLogger().setLevel(logging.INFO)
     client = selectClient(sys.argv)

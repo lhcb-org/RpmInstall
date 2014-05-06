@@ -32,7 +32,7 @@ SLBYUMCONF = "lbyum.conf"
 
 # List of packages to ignore for our case
 IGNORED_PACKAGES = ["rpmlib(CompressedFileNames)", "/bin/sh", "rpmlib(PayloadFilesHavePrefix)",
-                    "rpmlib(PartialHardlinkSets)", "DBASE_Gen_DecFiles"]
+                    "rpmlib(PartialHardlinkSets)"]
 
 __RCSID__ = "$Id$"
 
@@ -234,6 +234,15 @@ class Package(VersionedObject): #IGNORE:R0902
     def url(self):
         """ Returns the URL to download the file """
         return self.repository.repourl + "/" + self.location
+
+    def __eq__(self, other):
+        if other == None:
+            return False
+        return self.name == other.name \
+               and self.version == other.version
+    
+    def __hash__(self):
+        return hash((self.name, self.version, self.group, self.arch))
 
     #
     # Methods for pretty display
@@ -1002,7 +1011,7 @@ class LbYumClient(object):
 
                 # Check for circular dependencies using the set passed
                 if pa in alreadyprocessed:
-                    log.warning("Cyclic dependency in repository with package: %s" % pa.name)
+                    #log.warning("Cyclic dependency in repository with package: %s" % pa.name)
                     continue
 
                 if pa != None:
