@@ -43,8 +43,6 @@ class LbInstallConfig(object): #IGNORE:R0903
         self.repourl = None
         # Debug mode defaults to false
         self.debug = False
-        # No-update mode isn't default
-        self.noautoupdate = False
         # Use install by default
         self.rpmupdate = False
         # Version of the scripts
@@ -252,8 +250,9 @@ class InstallArea(object): # IGNORE:R0902
             fini = open(self.initfile, "w")
             fini.write(time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))
             fini.close()
-        else:
-            self._checkUpdates()
+        # BC: Remove auto update and add specific command instead
+        #else:
+        #    self._checkUpdates()
 
     # Pass through commands to RPM and lbYum
     ##########################################################################
@@ -403,7 +402,7 @@ class InstallArea(object): # IGNORE:R0902
             raise LbInstallException("Error reading the list of packages from RPM DB")
         return [ l.split(" ") for l in out.splitlines() ] #IGNORE:E1103
 
-    def _checkUpdates(self):
+    def _checkUpdates(self, checkOnly):
         """ Check whether packages could be updated in the repository """
         from DependencyManager import Requires, Provides
         self.log.info("Checking for updates")
@@ -417,6 +416,7 @@ class InstallArea(object): # IGNORE:R0902
             namevers.append(prov)
             packageList[key] = namevers
 
+        updateCount=0
         for key in packageList.keys():
             # Only checking for updates of the last installed version
             newest = sorted(packageList[key])[-1]
@@ -425,12 +425,26 @@ class InstallArea(object): # IGNORE:R0902
             req = Requires(newest.name, newest.version, None, None, "EQ", None)
             update = self.lbYumClient.findLatestMatchingRequire(req)
             if update != None and update > newest:
-                if self.config.noautoupdate:
-                    self.log.warning("%s.%s-%s could be updated to %s but update disabled"
+                updateCount += 1
+                if checkOnly:
+                    self.log.warning("%s.%s-%s could be updated to %s"
                                      % (name, version, release, update.rpmName()))
                 else:
                     self.log.warning("Updating %s.%s-%s to %s" % (name, version, release, update.rpmName()))
                     self.installRpm(update.name, update.version, update.release, False, True)
+
+        # Writing summary
+        if checkOnly:
+            self.log.warning("Number of packages to update: %d" % updateCount)
+        else:
+            self.log.warning("Updated %d packages" % updateCount)
+
+    # Methods to update/check for updates
+    ##########################################################################
+    def update(self, checkOnly):
+        """ Checks whether updates are available and installs them if requested"""
+        self._checkUpdates(checkOnly)
+
 
     # Methods to download/install RPMs (replacement for yum install)
     ##########################################################################
@@ -472,8 +486,9 @@ class InstallArea(object): # IGNORE:R0902
 
         # Checking what files should be downloaded
         installlist = set(self.lbYumClient.getAllPackagesRequired(package))
-        self.log.info("Found %d RPMs to install:" % len(installlist))
-        self.log.info(" ".join([p.rpmName() for p in installlist ]))
+        rpmNames = set([p.rpmName() for p in self.lbYumClient.getAllPackagesRequired(package)])
+        self.log.info("Found %d RPMs to install:" % len(rpmNames))
+        self.log.info(" ".join(rpmNames))
 
         if len(installlist) == 0:
             raise Exception("Error: No files to download")
@@ -555,7 +570,7 @@ class LbInstallOptionParser(optparse.OptionParser): #IGNORE:R0904
 class MainClient(object):
     """ Ancestor for both clients, the new one and the one
     compatible with install project arguments """
-    def __init__(self, configType, arguments=None, dryrun=False):
+    def __init__(self, configType, arguments=None, dryrun=False, prog = "LbInstall"):
         """ Common setup for both clients """
         self.config = LbInstallConfig(configType)
         self.log = logging.getLogger(__name__)
@@ -564,8 +579,9 @@ class MainClient(object):
         self.installArea = None
         self.runMethod = None
         self.runArgs = None
+        self.prog = prog
 
-        parser = LbInstallOptionParser(usage=usage(sys.argv[0]))
+        parser = LbInstallOptionParser(usage=usage(self.prog))
         parser.add_option('-d', '--debug',
                             dest="debug",
                             default=False,
@@ -584,13 +600,8 @@ class MainClient(object):
         parser.add_option('--dryrun',
                             dest="dryrun",
                             default=False,
-                            action="store",
-                            help="Only print the command that will be run")
-        parser.add_option('--noautoupdate',
-                            dest="noautoupdate",
-                            default=False,
                             action="store_true",
-                            help="Disable automatic updating of packages")
+                            help="Only print the command that will be run")
         parser.add_option('--rpmupdate',
                             dest="rpmupdate",
                             default=False,
@@ -615,7 +626,6 @@ class MainClient(object):
                 self.config.repourl = opts.repourl
 
             # Checking the update options
-            self.config.noautoupdate = opts.noautoupdate
             self.config.rpmupdate = opts.rpmupdate
 
             # Now setting the logging depending on debug mode...
@@ -648,6 +658,7 @@ class MainClient(object):
 
         except LbInstallException, lie:
             print >> sys.stderr, "ERROR: " + str(lie)
+            self.parser.print_help()
             rc = 1
         except:
             print >> sys.stderr, "Exception in lb-install:"
@@ -671,10 +682,12 @@ class LbInstallClient(MainClient):
     MODE_INSTALLRPM = "install"
     MODE_RPM     = "rpm"
     MODE_LIST    = "list"
-    MODES = [    MODE_INSTALLRPM, MODE_RPM, MODE_LIST ]
+    MODE_UPDATE  = "update"
+    MODE_CHECK   = "check"
+    MODES = [    MODE_INSTALLRPM, MODE_RPM, MODE_LIST, MODE_UPDATE, MODE_CHECK ]
 
-    def __init__(self, config, arguments=None, dryrun=False):
-        super(LbInstallClient, self).__init__(config, arguments, dryrun)
+    def __init__(self, config, arguments=None, dryrun=False, prog="LbInstall"):
+        super(LbInstallClient, self).__init__(config, arguments, dryrun, prog)
         self.parser.disable_interspersed_args()
         self.log = logging.getLogger(__name__)
 
@@ -700,10 +713,13 @@ class LbInstallClient(MainClient):
             runMethod = "rpm"
             runArgs = [ args[1:] ]
         elif mode == LbInstallClient.MODE_LIST:
-
             # Mode that list packages according to a regexp
             runMethod = "listpackages"
             runArgs = [ args[1:] ]
+        elif mode == LbInstallClient.MODE_UPDATE or mode == LbInstallClient.MODE_CHECK:
+            # Mode that list packages according to a regexp
+            runMethod = "update"
+            runArgs = [ mode  == LbInstallClient.MODE_CHECK ]
         elif mode == LbInstallClient.MODE_INSTALLRPM:
             # Mode where the RPMs are installed by name
             # Fills in with None if the arguments are not there,
@@ -784,12 +800,12 @@ def selectClient(args):
     """ Chooses which client to select depending on command name and command line"""
     retclient = LbInstallClient
 
-    if len(args) > 0 and args[0] == "install_project.py":
-        retclient = InstallProjectClient
-    else:
-        cmdlist = [cmd for cmd in args if cmd in LbInstallClient.MODES]
-        if len(cmdlist) == 0:
-            retclient = InstallProjectClient
+    #if len(args) > 0 and args[0] == "install_project.py":
+    #    retclient = InstallProjectClient
+    #else:
+    #    cmdlist = [cmd for cmd in args if cmd in LbInstallClient.MODES]
+    #    if len(cmdlist) == 0:
+    #        retclient = InstallProjectClient
     return retclient
 
 # Usage for the script
@@ -803,10 +819,6 @@ The environment variable MYSITEROOT MUST be set for this script to work.
 
 It can be used in the following ways:
 
-%(cmd)s [-d][-b] <project> <version>
-install_software compatibility mode: This installs the LHCb project/Package chosen,
-with the binaries if -b is specified.
-
 %(cmd)s install <rpmname> [<version> [<release>]]
 Installs a RPM from the yum repository
 --rpmupdate can be chose to perform an update instead of a straight install.
@@ -818,14 +830,20 @@ the regular expression passed.
 %(cmd)s rpm <rpm options>...
 Pass through mode where the command is delegated to RPM (with the correct DB).
 
+%(cmd)s check 
+Checks whether there are any RPMs to update from repo and list them
+
+%(cmd)s update
+Checks whether there are any RPMs to update from repo and updates them
+
 """ % { "cmd" : cmd }
 
 
-def LbInstall(configType = "AtlasConfig"):
+def LbInstall(configType = "LCGConfig", prog="LbInstall"):
     logging.basicConfig(format="%(levelname)-8s: %(message)s")
     logging.getLogger().setLevel(logging.INFO)
     client = selectClient(sys.argv)
-    sys.exit(client(configType).main())
+    sys.exit(client(configType, prog=prog).main())
     
 
 # Main just chooses the client and starts it
