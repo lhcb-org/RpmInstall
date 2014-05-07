@@ -35,11 +35,10 @@ class Config:
             yplf.write(installArea._getYumRepo("lcg", lcgsurl))
             yplf.close()
 
-
-    def getPrefixes(self):
-        """ Returns the prefix in this case """
-	if group == None or group == "lhcb":
-	    return "/opt/LHCbSoft/lhcb"
-        else:
-            return "/opt/lcg"
+    def getRelocateCommand(self, siteroot):
+        """ Returns relocate command to be passed to RPM for the repositories """
+        rpmcmd = " --relocate %s=%s " % ('/opt/lcg', os.path.join(siteroot, 'lcg', 'releases'))
+        rpmcmd += " --relocate %s=%s " % ('/opt/LHCbSoft', siteroot)
+        rpmcmd += " --badreloc "
+        return rpmcmd
 

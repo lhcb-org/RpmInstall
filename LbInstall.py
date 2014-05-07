@@ -131,9 +131,6 @@ class InstallArea(object): # IGNORE:R0902
         # Setting the main repository URL
         self.repourl = config.repourl
         
-        # prefix for the RPMs
-        #self.rpmprefix = config.configInst.getPrefix()
-
         # Making sure the db is initialized
         self.dbpath = os.path.join(self.siteroot, SVAR, SLIB, SRPM)
         self._initRPMDB()
@@ -268,9 +265,7 @@ class InstallArea(object): # IGNORE:R0902
 
         rpmcmd = "rpm --dbpath %s " % self.dbpath
         if not query_mode and install_mode :
-            rpmcmd += " --relocate %s=%s " % ('/opt/lcg', os.path.join(self.siteroot, 'lcg', 'releases'))
-            rpmcmd += " --relocate %s=%s " % ('/opt/LHCbSoft', self.siteroot)
-            rpmcmd += " --badreloc "
+            rpmcmd += self.config.configInst.getRelocateCommand(self.siteroot)
         rpmcmd += " ".join(args)
 
         self.log.info("RPM command:")

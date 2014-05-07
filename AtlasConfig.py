@@ -24,7 +24,13 @@ class Config:
             yplf.write(installArea._getYumRepo("repo", "http://atlas-computing.web.cern.ch/atlas-computing/links/reposDirectory/lcg/slc6/yum/"))
             yplf.close()
 
-    def getPrefix(self):
-        """ Returns the prefix in this case """
-        return "/opt/atlas"
+
+    def getRelocateCommand(self, siteroot):
+        """ Returns relocate command to be passed to RPM for the repositories """
+        rpmcmd = " --relocate %s=%s " % ('/opt/lcg', os.path.join(siteroot, 'lcg', 'releases'))
+        rpmcmd += " --relocate %s=%s " % ('/opt/atlas', siteroot)
+        rpmcmd += " --badreloc "
+        return rpmcmd
+     
+
 
